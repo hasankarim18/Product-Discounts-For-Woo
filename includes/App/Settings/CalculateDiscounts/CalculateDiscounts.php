@@ -30,11 +30,19 @@ class CalculateDiscounts
         }
 
         // echo 'total:' . $total;
+        // apply_filters('pdfw_product_discount_for_3', 15);
+        // apply_filters('pdfw_product_discount_for_2', 10);
+
+        $discount_for_2 = apply_filters('pdfw_product_discount_for_2', 10);
+        $discount_for_3 = apply_filters('pdfw_product_discount_for_3', 15);
 
 
-        if ($total >= 2) {
-            $discount = $cart->get_subtotal() * 10 / 100;
-            $cart->add_fee("10% Discount for 2", -$discount);
+        if ($total > 1 && $total < 3) {
+            $discount = $cart->get_subtotal() * $discount_for_2 / 100;
+            $cart->add_fee("{$discount_for_2}% Discount for 2", -$discount);
+        } elseif ($total >= 3) {
+            $discount = $cart->get_subtotal() * $discount_for_3 / 100;
+            $cart->add_fee("{$discount_for_3}% Discount for 3", -$discount);
         }
     }
 
