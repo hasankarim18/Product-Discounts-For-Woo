@@ -1,0 +1,20 @@
+{
+  "name": "hasan/product-discounts-for-woo",
+  "autoload": {
+    "psr-4": {
+      "Hasan\\ProductDiscountsForWoo\\": "includes/"
+    }
+  },
+  "authors": [
+    {
+      "name": "hasankarim18",
+      "email": "hallysust@gmail.com"
+    }
+  ],
+  "require": {},
+  "require-dev": {
+    "php-stubs/wordpress-stubs": "^6.8",
+    "arifpavel/elementor-stubs": "3.1.4.1",
+    "php-stubs/woocommerce-stubs": "^9.3"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "intelephense.environment.includePaths": [
+    "${workspaceFolder}/vendor/php-stubs/wordpress-stubs",
+    "${workspaceFolder}/vendor/arifpavel/elementor-stubs"
+  ],
+  "intelephense.stubs": [
+    "apache",
+    "bcmath",
+    "Core",
+    "curl",
+    "date",
+    "json",
+    "mbstring",
+    "openssl",
+    "PDO",
+    "mysql",
+    "sqlite3",
+    "Phar",
+    "Reflection",
+    "session",
+    "sockets",
+    "standard",
+    "superglobals",
+    "tokenizer",
+    "xml",
+    "wordpress"
+  ],
+  "intelephense.diagnostics.enable": true,
+  "intelephense.files.associations": ["**/*.php"],
+  "intelephense.telemetry.enabled": false,
+  "files.exclude": {
+    "**/node_modules": false,
+    "**/vendor/**/.git": true,
+    "**/themes": true,
+    "**/upgrade": true,
+    "**/uploads": true,
+    "**/index.php": true,
+    "**/plugins/contact-form-7": true,
+    "**/plugins/gb-one": true,
+    "**/plugins/gb-up": true,
+    "**/plugins/gb-static": true,
+    "**/plugins/wp-dummy-content-generator": true,
+    "**/plugins/custom-post-type-ui": true,
+    "**/plugins/woocommerce-shipping": true,
+    "**/plugins/woocommerce-services": true,
+    "**/plugins/woocommerce-paypal-payments": true,
+    "**/plugins/woocommerce-payments": true,
+    "**/plugins/pinterest-for-woocommerce": true,
+    "**/plugins/google-listings-and-ads": true,
+    "**/plugins/woocommerce": true,
+    "**/plugins/index.php": true,
+    "/mu-plugins/": true,
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/vendor": true
+  }
+}
