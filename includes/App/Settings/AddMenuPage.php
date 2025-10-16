@@ -6,10 +6,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-
 class AddMenuPage
 {
     use \Hasan\ProductDiscountsForWoo\App\Traits\Singleton;
+    
     public function init()
     {
         if (is_admin()) {
@@ -31,6 +31,14 @@ class AddMenuPage
             plugins_url('/assets/css/admin-style.css', dirname(dirname(dirname(__FILE__)))),
             [],
             '1.0.0'
+        );
+
+        wp_enqueue_script(
+            'pdfw-admin-script',
+            plugins_url('/assets/js/admin-script.js', dirname(dirname(dirname(__FILE__)))),
+            ['jquery'],
+            '1.0.0',
+            true
         );
     }
 
@@ -90,18 +98,27 @@ class AddMenuPage
             wp_die('Security check failed');
         }
 
+        $redirect_url = admin_url('admin.php?page=discount-settings');
+
         switch ($_POST['pdfw_action']) {
             case 'add_rule':
                 if (isset($_POST['quantity'], $_POST['discount'])) {
                     $this->save_rule($_POST['quantity'], $_POST['discount']);
-                    wp_redirect(add_query_arg(['message' => 'rule_added']));
+                    wp_safe_redirect(add_query_arg('message', 'rule_added', $redirect_url));
+                    exit;
+                }
+                break;
+            case 'update_rule':
+                if (isset($_POST['rule_id'], $_POST['quantity'], $_POST['discount'])) {
+                    $this->update_rule($_POST['rule_id'], $_POST['quantity'], $_POST['discount']);
+                    wp_safe_redirect(add_query_arg('message', 'rule_updated', $redirect_url));
                     exit;
                 }
                 break;
             case 'delete_rule':
                 if (isset($_POST['rule_id'])) {
                     $this->delete_rule($_POST['rule_id']);
-                    wp_redirect(add_query_arg(['message' => 'rule_deleted']));
+                    wp_safe_redirect(add_query_arg('message', 'rule_deleted', $redirect_url));
                     exit;
                 }
                 break;
@@ -109,10 +126,48 @@ class AddMenuPage
     }
 
 
+    private function get_rule($rule_id)
+    {
+        $rules = $this->get_discount_rules();
+        foreach ($rules as $rule) {
+            if ($rule['id'] === $rule_id) {
+                return $rule;
+            }
+        }
+        return null;
+    }
+
+    private function update_rule($rule_id, $quantity, $discount)
+    {
+        $rules = $this->get_discount_rules();
+        foreach ($rules as &$rule) {
+            if ($rule['id'] === $rule_id) {
+                $rule['quantity'] = absint($quantity);
+                $rule['discount'] = min(100, max(0, floatval($discount)));
+                break;
+            }
+        }
+        usort($rules, function($a, $b) {
+            return $a['quantity'] - $b['quantity'];
+        });
+        update_option('pdfw_discount_rules', $rules);
+    }
+
     function settings_page()
     {
         $this->handle_form_submission();
         $rules = $this->get_discount_rules();
+        $edit_mode = isset($_GET['edit']) ? sanitize_text_field($_GET['edit']) : '';
+        
+        if ($edit_mode) {
+            $rule = $this->get_rule($edit_mode);
+            if (!$rule) {
+                wp_redirect(admin_url('admin.php?page=discount-settings'));
+                exit;
+            }
+            $this->render_edit_form($rule);
+            return;
+        }
         ?>
         <div class="wrap pdfw-settings-page">
             <div class="pdfw-settings-header">
@@ -129,9 +184,16 @@ class AddMenuPage
                     case 'rule_deleted':
                         echo '<div class="notice notice-success"><p>' . esc_html__('Discount rule deleted successfully.', 'pdfw-domain') . '</p></div>';
                         break;
+                    case 'rule_updated':
+                        echo '<div class="notice notice-success"><p>' . esc_html__('Discount rule updated successfully.', 'pdfw-domain') . '</p></div>';
+                        break;
                 }
             }
             ?>
+
+            <button type="button" class="button button-primary" id="pdfw-add-new-rule">
+                <?php esc_html_e('Add New Rule', 'pdfw-domain'); ?>
+            </button>
 
             <div class="pdfw-add-rule">
                 <h3><?php esc_html_e('Add New Discount Rule', 'pdfw-domain'); ?></h3>
@@ -162,7 +224,10 @@ class AddMenuPage
                         <p class="description"><?php esc_html_e('Discount percentage (0-100)', 'pdfw-domain'); ?></p>
                     </div>
 
-                    <?php submit_button(__('Add Rule', 'pdfw-domain')); ?>
+                    <div class="pdfw-button-group">
+                        <?php submit_button(__('Add Rule', 'pdfw-domain'), 'primary', 'submit', false); ?>
+                        <button type="button" class="button pdfw-cancel-add"><?php esc_html_e('Cancel', 'pdfw-domain'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -183,6 +248,10 @@ class AddMenuPage
                                     <td><?php echo esc_html($rule['quantity']); ?></td>
                                     <td><?php echo esc_html($rule['discount']); ?>%</td>
                                     <td>
+                                        <a href="<?php echo esc_url(add_query_arg(['edit' => $rule['id']])); ?>" 
+                                           class="button">
+                                            <?php esc_html_e('Edit', 'pdfw-domain'); ?>
+                                        </a>
                                         <form method="post" action="" style="display:inline;">
                                             <?php wp_nonce_field('pdfw_manage_rules'); ?>
                                             <input type="hidden" name="pdfw_action" value="delete_rule">
@@ -201,28 +270,55 @@ class AddMenuPage
                 </div>
             <?php endif; ?>
         </div>
-
-        <script>
-        jQuery(document).ready(function($) {
-            $('.pdfw-rule-form').on('submit', function(e) {
-                var quantity = parseInt($('#quantity').val());
-                var discount = parseInt($('#discount').val());
-                
-                if (isNaN(quantity) || quantity < 1) {
-                    alert('<?php esc_html_e('Please enter a valid quantity (minimum 1)', 'pdfw-domain'); ?>');
-                    e.preventDefault();
-                    return false;
-                }
-                
-                if (isNaN(discount) || discount < 0 || discount > 100) {
-                    alert('<?php esc_html_e('Please enter a valid discount percentage (0-100)', 'pdfw-domain'); ?>');
-                    e.preventDefault();
-                    return false;
-                }
-            });
-        });
-        </script>
         <?php
     }
 
-}
+    private function render_edit_form($rule)
+    {
+        ?>
+        <div class="wrap">
+            <div class="pdfw-edit-form-container">
+                <h2><?php esc_html_e('Edit Discount Rule', 'pdfw-domain'); ?></h2>
+                <form method="post" action="" class="pdfw-rule-form">
+                    <?php wp_nonce_field('pdfw_manage_rules'); ?>
+                    <input type="hidden" name="pdfw_action" value="update_rule">
+                    <input type="hidden" name="rule_id" value="<?php echo esc_attr($rule['id']); ?>">
+                    
+                    <div class="form-field">
+                        <label for="quantity"><?php esc_html_e('Minimum Quantity', 'pdfw-domain'); ?></label>
+                        <input type="number" 
+                            id="quantity" 
+                            name="quantity" 
+                            min="1" 
+                            required
+                            value="<?php echo esc_attr($rule['quantity']); ?>">
+                        <p class="description"><?php esc_html_e('Minimum number of items in cart', 'pdfw-domain'); ?></p>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="discount"><?php esc_html_e('Discount Percentage', 'pdfw-domain'); ?></label>
+                        <input type="number" 
+                            id="discount" 
+                            name="discount" 
+                            min="0" 
+                            max="100" 
+                            required
+                            value="<?php echo esc_attr($rule['discount']); ?>">
+                        <p class="description"><?php esc_html_e('Discount percentage (0-100)', 'pdfw-domain'); ?></p>
+                    </div>
+
+                    <div class="pdfw-button-group">
+                        <?php submit_button(__('Update Rule', 'pdfw-domain'), 'primary', 'submit', false); ?>
+                        <a href="<?php echo esc_url(admin_url('admin.php?page=discount-settings')); ?>" 
+                           class="button">
+                            <?php esc_html_e('Cancel', 'pdfw-domain'); ?>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php
+    }
+        
+    }
+
