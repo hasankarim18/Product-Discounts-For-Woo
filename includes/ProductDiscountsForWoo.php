@@ -34,9 +34,8 @@ class ProductDiscountsForWoo
 
     public function includes()
     {
-
-
         App\Settings::instance()->init();
+        App\Settings\AdminPro::instance()->init();
     }
 
     public function init_hooks()
