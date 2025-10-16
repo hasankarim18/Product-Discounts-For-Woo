@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Admin page pro
+
 class AdminPro
 {
     use \Hasan\ProductDiscountsForWoo\App\Traits\Singleton;
