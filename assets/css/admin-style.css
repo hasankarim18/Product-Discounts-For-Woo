@@ -1,8 +1,7 @@
 .pdfw-settings-page {
-  max-width: 800px;
-  margin: 20px auto;
+  max-width: 1000px;
+  margin: 20px 0;
 }
-
 .pdfw-settings-page h2 {
   color: #23282d;
   font-size: 1.8em;

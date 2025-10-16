@@ -6,7 +6,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-
 class CalculateDiscounts
 {
     use \Hasan\ProductDiscountsForWoo\App\Traits\Singleton;
@@ -16,43 +15,53 @@ class CalculateDiscounts
         add_action('woocommerce_cart_calculate_fees', [$this, 'cart_discount_rules'], 10, 1);
     }
 
+    private function get_applicable_discount($total_quantity)
+    {
+        $rules = get_option('pdfw_discount_rules', []);
+        if (!is_array($rules)) {
+            return null;
+        }
+
+        // Sort rules by quantity in descending order to get the highest applicable discount
+        usort($rules, function($a, $b) {
+            return $b['quantity'] - $a['quantity'];
+        });
+
+        // Find the first rule that applies (highest discount for the quantity)
+        foreach ($rules as $rule) {
+            if ($total_quantity >= $rule['quantity']) {
+                return $rule;
+            }
+        }
+
+        return null;
+    }
+
     public function cart_discount_rules($cart)
     {
         if (is_admin()) {
             return;
         }
-        //   var_dump($cart);
 
-        $total = 0;
+        $total_quantity = 0;
 
         foreach ($cart->get_cart() as $item) {
-            $total += $item['quantity'];
+            $total_quantity += $item['quantity'];
         }
 
-        // echo 'total:' . $total;
-        // apply_filters('pdfw_product_discount_for_3', 15);
-        // apply_filters('pdfw_product_discount_for_2', 10);
+        $applicable_rule = $this->get_applicable_discount($total_quantity);
 
-        // $discount_for_2 = apply_filters('pdfw_product_discount_for_2', get_option('wc_discount_percent', 10));
-        // $discount_for_3 = apply_filters('pdfw_product_discount_for_3', 15);
-
-
-        // if ($total > 1 && $total < 3) {
-        //     $discount = $cart->get_subtotal() * $discount_for_2 / 100;
-        //     $cart->add_fee("{$discount_for_2}% Discount for 2", -$discount);
-        // } elseif ($total >= 3) {
-        //     $discount = $cart->get_subtotal() * $discount_for_3 / 100;
-        //     $cart->add_fee("{$discount_for_3}% Discount for 3", -$discount);
-        // }
-
-        if ($total >= 2) {
-            $discount_percent = get_option('wc_discount_percent');
-            $quantity = get_option('wc_discount_min_quantity');
-
-            $discount = $cart->get_subtotal() * $discount_percent / 100;
-            $cart->add_fee("{$discount_percent}% Discount for {$quantity}", -$discount);
+        if ($applicable_rule) {
+            $discount = $cart->get_subtotal() * $applicable_rule['discount'] / 100;
+            $cart->add_fee(
+                sprintf(
+                    __('%d%% Discount for %d+ items', 'pdfw-domain'),
+                    $applicable_rule['discount'],
+                    $applicable_rule['quantity']
+                ),
+                -$discount
+            );
         }
-
     }
 
 }
